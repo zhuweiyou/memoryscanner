@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	logFilePrefix = "wechat-memory-search"
+	logFilePrefix = "wechatmemorysearch"
 )
 
 func main() {

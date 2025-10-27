@@ -1,4 +1,4 @@
-module wechat-memory-search
+module wechatmemorysearch
 
 go 1.25
 
