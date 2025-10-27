@@ -178,11 +178,3 @@ go build -o wechatmemorysearch.exe ./cmd/wechatmemorysearch
 ### "扫描失败"
 - 目标进程可能已经退出
 - 内存区域可能无法访问（这是正常的）
-
-## 开发信息
-
-- **语言**: Go
-- **架构**: 跨平台支持
-- **依赖**: 标准库
-- **许可证**: 请查看 LICENSE 文件
-
