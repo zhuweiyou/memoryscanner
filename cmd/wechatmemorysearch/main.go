@@ -19,14 +19,19 @@ const (
 )
 
 func main() {
-	fmt.Println("=== WeChatAppEx.exe 内存搜索工具 ===")
-	fmt.Println()
+	defer func() {
+		// 获取用户输入
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Print("\n按回车键退出...")
+		_, _ = reader.ReadString('\n')
+	}()
 
-	// 获取用户输入
-	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("=== 微信内存搜索工具 (支持小程序和网页) ===")
+	fmt.Println()
 
 	// 第一次询问：搜索字符串
 	fmt.Print("请输入要搜索的字符串 (支持?模糊搜索，例如we?ha?): ")
+	reader := bufio.NewReader(os.Stdin)
 	searchStr, err := reader.ReadString('\n')
 	if err != nil {
 		fmt.Printf("读取输入失败: %v\n", err)
@@ -41,7 +46,8 @@ func main() {
 
 	// 第二次询问：字节长度
 	fmt.Print("请输入要搜索的字节长度 (默认1024): ")
-	lengthStr, err := reader.ReadString('\n')
+	reader2 := bufio.NewReader(os.Stdin)
+	lengthStr, err := reader2.ReadString('\n')
 	if err != nil {
 		fmt.Printf("读取输入失败: %v\n", err)
 		return
@@ -76,21 +82,35 @@ func main() {
 
 	// 搜索所有 WeChatAppEx.exe 进程
 	fmt.Println("正在搜索 WeChatAppEx.exe 进程...")
-	pids, err := memoryscanner.FindProcessesByName("WeChatAppEx.exe")
+	wechatAppExPids, err := memoryscanner.FindProcessesByName("WeChatAppEx.exe")
 	if err != nil {
-		fmt.Printf("未找到 WeChatAppEx.exe 进程: %v\n", err)
-		log.Printf("未找到 WeChatAppEx.exe 进程: %v", err)
+		// 静默处理，不报错，返回空列表
+		wechatAppExPids = []uint32{}
+	}
+
+	// 搜索所有 WechatBrowser.exe 进程
+	fmt.Println("正在搜索 WechatBrowser.exe 进程...")
+	wechatBrowserPids, err := memoryscanner.FindProcessesByName("WechatBrowser.exe")
+	if err != nil {
+		// 静默处理，不报错，返回空列表
+		wechatBrowserPids = []uint32{}
+	}
+
+	// 合并所有找到的进程ID
+	var allPids []uint32
+	allPids = append(allPids, wechatAppExPids...)
+	allPids = append(allPids, wechatBrowserPids...)
+
+	if len(allPids) == 0 {
+		fmt.Println("未找到 WeChatAppEx.exe 或 WechatBrowser.exe 进程")
+		log.Println("未找到 WeChatAppEx.exe 或 WechatBrowser.exe 进程")
 		return
 	}
 
-	if len(pids) == 0 {
-		fmt.Println("未找到 WeChatAppEx.exe 进程")
-		log.Println("未找到 WeChatAppEx.exe 进程")
-		return
-	}
-
-	fmt.Printf("找到 %d 个 WeChatAppEx.exe 进程: %v\n", len(pids), pids)
-	log.Printf("找到 %d 个 WeChatAppEx.exe 进程: %v", len(pids), pids)
+	fmt.Printf("找到 %d 个进程: WeChatAppEx.exe(%d个) WechatBrowser.exe(%d个) -> %v\n",
+		len(allPids), len(wechatAppExPids), len(wechatBrowserPids), allPids)
+	log.Printf("找到 %d 个进程: WeChatAppEx.exe(%d个) WechatBrowser.exe(%d个) -> %v",
+		len(allPids), len(wechatAppExPids), len(wechatBrowserPids), allPids)
 	fmt.Println()
 
 	// 设置信号处理
@@ -111,10 +131,10 @@ func main() {
 	totalMatches := 0
 	pattern := memoryscanner.StringToPattern(searchStr, searchLength)
 
-	for _, pid := range pids {
+	for _, pid := range allPids {
 		select {
 		case <-ctx.Done():
-			goto done
+			return
 		default:
 		}
 
@@ -158,7 +178,6 @@ func main() {
 		fmt.Println()
 	}
 
-done:
 	fmt.Printf("搜索完成！总共找到 %d 个匹配项\n", totalMatches)
 	log.Printf("搜索完成！总共找到 %d 个匹配项", totalMatches)
 	if logFile != nil {
